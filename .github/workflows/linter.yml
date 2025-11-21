@@ -1,0 +1,45 @@
+name: Linter
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_call: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy
+
+      - name: Lint Python code (workload)
+        working-directory: load-generator-image
+        run: |
+          flake8 workload.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 workload.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Type check Python (workload)
+        working-directory: load-generator-image
+        run: |
+          mypy workload.py --ignore-missing-imports
+
+      - name: Install yamllint
+        run: |
+          pip install yamllint
+
+      - name: Lint YAML files
+        run: |
+          yamllint \
+            .github/workflows \
+            charts/*/Chart.yaml \
+            charts/*/values.yaml \
+            charts/*/templates
