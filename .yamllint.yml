@@ -1,0 +1,21 @@
+extends: default
+
+# Only lint real YAML files, and ignore Helm templates which contain
+# Go templating syntax ({{ ... }}) that confuses yamllint.
+yaml-files:
+  - "*.yml"
+  - "*.yaml"
+
+ignore: |
+  charts/*/templates/*
+
+rules:
+  document-start: disable
+  truthy: disable
+  empty-lines: disable
+  new-line-at-end-of-file: disable
+  line-length:
+    max: 120
+    level: warning
+
+

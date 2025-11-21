@@ -1,0 +1,45 @@
+name: Build and Push Load Generator Image
+
+on:
+    push:
+        branches: [infra-setup]
+        paths:
+            - "load-generator-image/**"
+            - ".github/workflows/build-load-generator.yml"
+    workflow_dispatch: {}
+    workflow_call: {}
+
+env:
+    # Full image reference, e.g. "your-user/geth-workload:latest" or "ghcr.io/owner/geth-workload:latest"
+    WORKLOAD_IMAGE: "docker.io/adamkkk89/geth-workload:latest"
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: read
+            packages: write
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to container registry
+              uses: docker/login-action@v3
+              with:
+                  registry: docker.io
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_SECRET }}
+
+            - name: Build and push load generator image
+              uses: docker/build-push-action@v5
+              with:
+                  context: ./load-generator-image
+                  file: ./load-generator-image/Dockerfile.workload
+                  push: true
+                  platforms: linux/amd64
+                  tags: ${{ env.WORKLOAD_IMAGE }}
