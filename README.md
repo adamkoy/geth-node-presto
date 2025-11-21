@@ -17,11 +17,11 @@
   - [Connect kubectl to the cluster](#connect-kubectl-to-the-cluster)
   - [Deploy Helm charts](#deploy-helm-charts)
   - [Build and publish the load generator image](#build-and-publish-the-load-generator-image)
+  - [Deploy full stack locally](#deploy-full-stack-locally)
   - [Run the load generator locally](#run-the-load-generator-locally)
 - [How to](#how-to)
   - [Deploy the full stack using GitHub Actions](#deploy-the-full-stack-using-github-actions)
   - [Add a new Helm chart to the pipeline](#add-a-new-helm-chart-to-the-pipeline)
-  - [Troubleshooting common issues](#troubleshooting-common-issues)
 - [Other resources](#other-resources)
 - [License](#license)
 
@@ -29,13 +29,15 @@
 
 This repository contains a self‑contained dev stack for running an Ethereum (Geth) node on AWS EKS, 
 driving it with a configurable Python load generator, and observing everything via Prometheus + Grafana.
+The Geth node uses persistent storage backed by AWS EBS volumes, so chain data survives pod restarts
+and node upgrades.
 
 Infrastructure is provisioned with Terraform, workloads are deployed with Helm, and GitHub Actions 
 pipelines handle CI/CD:
 
 - Terraform creates a simple EKS cluster on the default VPC.
 - Helm charts deploy:
-  - A Geth node (`charts/geth-node`).
+  - A Geth node (`charts/geth-node`) with persistent storage via AWS EBS + a Kubernetes PVC.
   - A Python load generator (`charts/load-generator`) that sends configurable transaction load and exports Prometheus metrics.
   - An observability stack (`charts/observability`) with Prometheus + Grafana scraping both node and workload.
 - GitHub Actions automate:
@@ -67,7 +69,7 @@ pipelines handle CI/CD:
 │   └── variables.tf              # region, cluster_name, environment
 ├── .yamllint.yml                 # yamllint configuration (ignores Helm templates)
 ├── .gitignore                    # Ignore Terraform state, .terraform, etc.
-└── README.md                     # You are here
+└── README.md                     
 ```
 
 ### State and backend
@@ -259,6 +261,23 @@ image:
   tag: latest
 ```
 
+### Deploy full stack locally
+
+If you want to stand up the entire stack (infra + all charts) from your laptop without going through GitHub Actions, use the helper script:
+
+```bash
+cd /path/to/geth-node-presto
+chmod +x scripts/deploy-local.sh  # first time only
+./scripts/deploy-local.sh
+```
+
+This will:
+
+- Run `terraform init` and `terraform apply` in `terraform/`.
+- Use the `eks_connect` Terraform output to configure `kubectl`.
+- Deploy the `geth-node`, `load-generator`, and `observability` Helm charts.
+- Print the current pods with `kubectl get pods -A` so you can quickly confirm everything is running.
+
 ### Run the load generator locally
 
 You can also run the workload against the cluster from your laptop.
@@ -330,21 +349,6 @@ Typical flow for a new environment:
 3. Optionally extend `.github/workflows/linter.yml` to include new `values.yaml`/`Chart.yaml` if needed.
 4. Run the **Helm Deploy** workflow selecting your chart or `all`.
 
-### Troubleshooting common issues
-
-- **`Web3 is not connected` from the load generator (in-cluster)**  
-  - Check `geth.url` in `charts/load-generator/values.yaml` matches the actual Geth service name and port:
-    - e.g. `http://geth-node-geth-node.default.svc.cluster.local:8545`.
-  - Confirm the Geth pod and service are healthy.
-
-- **`Kubernetes cluster unreachable: the server has asked for the client to provide credentials` in CI**  
-  - The IAM role in `AWS_ROLE_NAME` must:
-    - Be allowed to call `eks:DescribeCluster` and `aws eks update-kubeconfig`.
-    - Be mapped into the EKS `aws-auth` ConfigMap (e.g. `system:masters` in dev) so Kubernetes accepts it.
-
-- **Helm deploy workflow can’t connect to the cluster**  
-  - Ensure Terraform state is present and the `eks_connect` output is valid.
-  - Re-run Terraform apply if the cluster was destroyed or changed.
 
 ## Other resources
 
