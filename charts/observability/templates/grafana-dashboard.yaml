@@ -1,0 +1,143 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "observability.fullname" . }}-grafana-dashboard-geth
+  namespace: {{ include "observability.namespace" . }}
+data:
+  geth-dashboard.json: |
+    {
+      "id": null,
+      "title": "Geth DevNet Performance Dashboard",
+      "tags": ["geth", "ethereum", "devnet"],
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Current Block Number",
+          "type": "stat",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "max(geth_workload_head_block_number)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Block Production Rate (blocks/min)",
+          "type": "stat",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+          "targets": [
+            {
+              "expr": "sum(rate(geth_workload_head_block_number[5m])) * 60",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "TPS Over Time",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 12, "x": 16, "y": 0},
+          "targets": [
+            {
+              "expr": "geth_workload_tps",
+              "refId": "A",
+              "legendFormat": "Transactions/sec"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Average Transaction Latency",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [
+            {
+              "expr": "geth_workload_avg_latency_seconds",
+              "refId": "A",
+              "legendFormat": "Latency (s)"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "P95 Transaction Latency",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(geth_workload_tx_latency_seconds_bucket[5m])) by (le))",
+              "refId": "A",
+              "legendFormat": "P95 latency (s)"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Transaction Failure Rate",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "targets": [
+            {
+              "expr": "geth_workload_failure_rate * 100",
+              "refId": "A",
+              "legendFormat": "Failure Rate (%)"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "title": "Gas Used (MGas/s)",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "targets": [
+            {
+              "expr": "geth_workload_mgas_per_sec",
+              "refId": "A",
+              "legendFormat": "Gas Used (MGas/s)"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "title": "RPC RPS",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "targets": [
+            {
+              "expr": "geth_workload_rpc_rps",
+              "refId": "A",
+              "legendFormat": "RPC RPS"
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "title": "RPC Error Rate",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+          "targets": [
+            {
+              "expr": "rate(geth_workload_rpc_errors_total[5m])",
+              "refId": "A",
+              "legendFormat": "RPC errors / sec"
+            }
+          ]
+        }
+      ],
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "refresh": "5s",
+      "timepicker": {},
+      "templating": {
+        "list": []
+      }
+    }
+{{- end }}
+
+

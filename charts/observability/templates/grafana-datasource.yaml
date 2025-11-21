@@ -1,0 +1,18 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "observability.fullname" . }}-grafana-datasources
+  namespace: {{ include "observability.namespace" . }}
+data:
+  prometheus.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://{{ include "observability.fullname" . }}-prometheus:{{ .Values.prometheus.service.port }}
+        isDefault: true
+{{- end }}
+
+
