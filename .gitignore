@@ -1,0 +1,30 @@
+.DS_Store
+
+# Python / virtualenv
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Node / tooling artifacts (if added later)
+node_modules/
+
+# Terraform local state and cache
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+crash.*.log
+
+# Kubernetes / Helm local artifacts
+*.tgz
+
+# VS Code / IDE settings
+.vscode/
+.idea/
+*.iml
+
+
