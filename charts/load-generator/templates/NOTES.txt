@@ -1,0 +1,22 @@
+1. Load generator deployment
+
+   The workload generator has been deployed.
+
+   Key environment variables (from values.yaml):
+     - GETH_URL: {{ .Values.geth.url }}
+     - TARGET_TPS: {{ .Values.workload.targetTps }}
+     - CONCURRENCY: {{ .Values.workload.concurrency }}
+     - DURATION_SECONDS: {{ .Values.workload.durationSeconds }}
+
+2. Metrics
+
+   A ClusterIP Service exposes the Prometheus metrics port.
+
+   To port-forward metrics locally:
+
+   kubectl port-forward svc/{{ include "load-generator.fullname" . }} {{ .Values.workload.metricsPort }}:{{ .Values.workload.metricsPort }}
+
+   Then open:
+     http://localhost:{{ .Values.workload.metricsPort }}/metrics
+
+

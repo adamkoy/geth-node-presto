@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "load-generator.fullname" . }}
+  labels:
+    {{- include "load-generator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "load-generator.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "load-generator.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        {{- range $k, $v := .Values.annotations }}
+        {{ $k }}: {{ $v | quote }}
+        {{- end }}
+    spec:
+      containers:
+        - name: load-generator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: GETH_URL
+              value: {{ .Values.geth.url | quote }}
+            - name: TARGET_TPS
+              value: {{ .Values.workload.targetTps | quote }}
+            - name: CONCURRENCY
+              value: {{ .Values.workload.concurrency | quote }}
+            - name: DURATION_SECONDS
+              value: {{ .Values.workload.durationSeconds | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.workload.metricsPort | quote }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.workload.metricsPort }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+
