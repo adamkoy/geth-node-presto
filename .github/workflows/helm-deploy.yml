@@ -1,0 +1,91 @@
+name: Helm Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (dev, stage, prod)"
+        required: true
+        default: "dev"
+        type: choice
+        options: ["dev", "stage", "prod"]
+      chart:
+        description: "Which chart to deploy"
+        required: true
+        default: "all"
+        type: choice
+        options: ["geth-node", "load-generator", "observability", "all"]
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment (dev, stage, prod)"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  helm-deploy:
+    name: Deploy Helm Charts
+    runs-on: ubuntu-latest
+    environment: presto-${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials from OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_NAME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+
+      - name: Set up Terraform (for eks_connect output)
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform init (read remote state)
+        working-directory: ./terraform
+        run: terraform init -input=false
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubectl for EKS
+        working-directory: ./terraform
+        run: |
+          EKS_CONNECT_CMD=$(terraform output -raw eks_connect)
+          echo "Running: $EKS_CONNECT_CMD"
+          eval "$EKS_CONNECT_CMD"
+
+      - name: Deploy geth-node chart
+        if: github.event.inputs.chart == 'geth-node' || github.event.inputs.chart == 'all'
+        working-directory: .
+        run: |
+          helm upgrade --install geth-node ./charts/geth-node
+
+      - name: Deploy load-generator chart
+        if: github.event.inputs.chart == 'load-generator' || github.event.inputs.chart == 'all'
+        working-directory: .
+        run: |
+          helm upgrade --install load-generator ./charts/load-generator
+
+      - name: Deploy observability chart
+        if: github.event.inputs.chart == 'observability' || github.event.inputs.chart == 'all'
+        working-directory: .
+        run: |
+          helm upgrade --install observability ./charts/observability

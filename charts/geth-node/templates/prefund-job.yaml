@@ -1,0 +1,60 @@
+{{- if .Values.prefund.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "geth-node.fullname" . }}-prefund
+  labels:
+    {{- include "geth-node.labels" . | nindent 4 }}
+    app: geth-prefund
+spec:
+  backoffLimit: {{ .Values.prefund.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app: geth-prefund
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: prefunder
+          image: "{{ .Values.prefund.image.repository }}:{{ .Values.prefund.image.tag }}"
+          imagePullPolicy: {{ .Values.prefund.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              set -e
+
+              RPC_URL="http://{{ include "geth-node.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.httpPort }}"
+
+              echo "Waiting for Geth JSON-RPC at $RPC_URL ..."
+              until curl -s "$RPC_URL" >/dev/null 2>&1; do
+                sleep 2
+              done
+
+              echo "Fetching dev account from eth_accounts ..."
+              RESP=$(curl -s -X POST "$RPC_URL" \
+                -H 'Content-Type: application/json' \
+                --data '{"jsonrpc":"2.0","method":"eth_accounts","params":[],"id":1}')
+
+              echo "eth_accounts response: $RESP"
+
+              FROM=$(printf '%s\n' "$RESP" | sed -E 's/.*"result":\["([^"]+)".*/\1/')
+
+              if [ -z "$FROM" ] || [ "$FROM" = "null" ]; then
+                echo "Failed to determine dev account from eth_accounts"
+                exit 1
+              fi
+
+              echo "Dev account: $FROM"
+              echo "Sending prefund to {{ .Values.prefund.account }} ..."
+
+              TX_RESP=$(curl -s -X POST "$RPC_URL" \
+                -H 'Content-Type: application/json' \
+                --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{\"from\":\"$FROM\",\"to\":\"{{ .Values.prefund.account }}\",\"value\":\"{{ .Values.prefund.amountWeiHex }}\"}],\"id\":2}")
+
+              echo "eth_sendTransaction response: $TX_RESP"
+              echo "Prefund transaction submitted. Verify with eth_getBalance."
+{{- end }}
+
+

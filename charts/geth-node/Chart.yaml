@@ -1,0 +1,8 @@
+apiVersion: v2
+name: geth-node
+description: Single-node Geth devnet (blockchain node) for development and testing.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+
