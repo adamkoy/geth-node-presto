@@ -33,7 +33,7 @@ permissions:
     contents: read
 
 env:
-    AWS_REGION: ${{ secrets.AWS_REGION }}
+    AWS_REGION: ${{ env.AWS_REGION }}
 
 jobs:
     terraform-plan:
@@ -80,7 +80,7 @@ jobs:
         needs: terraform-plan
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true'
         # Same environment name pattern as plan job
-        environment: presto-${{ github.event_inputs.environment }}
+        environment: presto-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'dev' }}
 
         steps:
             - name: Checkout
