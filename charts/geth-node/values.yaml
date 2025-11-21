@@ -1,0 +1,52 @@
+replicaCount: 1
+
+image:
+  repository: ethereum/client-go
+  tag: stable
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  httpPort: 8545
+  metricsPort: 6060
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "2Gi"
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: "gp2"
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+
+geth:
+  args:
+    - "--dev"
+    - "--http"
+    - "--http.addr=0.0.0.0"
+    - "--http.api=eth,net,web3,personal"
+    - "--http.vhosts=*"
+    - "--http.corsdomain=*"
+    - "--metrics"
+    - "--metrics.addr=0.0.0.0"
+    - "--dev.period=6"
+    - "--verbosity=3"
+
+prefund:
+  enabled: true
+  image:
+    repository: curlimages/curl
+    tag: "8.6.0"
+    pullPolicy: IfNotPresent
+  # Target account to prefund
+  account: "0x62358b29b9e3e70ff51D88766e41a339D3e8FFff"
+  # Amount to prefund in wei, hex-encoded (default: 100 ETH)
+  amountWeiHex: "0x56bc75e2d63100000"
+  backoffLimit: 3

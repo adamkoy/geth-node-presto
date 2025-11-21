@@ -1,0 +1,19 @@
+1. Geth devnet has been deployed as a single node.
+
+   To port-forward the HTTP JSON-RPC endpoint:
+
+   kubectl port-forward svc/{{ include "geth-node.fullname" . }} 8545:{{ .Values.service.httpPort }}
+
+   Then you can query the node locally, for example:
+
+   curl -s http://localhost:8545 \
+     -H 'Content-Type: application/json' \
+     --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+
+2. To check that the prefunded account has balance:
+
+   curl -s http://localhost:8545 \
+     -H 'Content-Type: application/json' \
+     --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"{{ .Values.prefund.account }}\",\"latest\"],\"id\":1}"
+
+
