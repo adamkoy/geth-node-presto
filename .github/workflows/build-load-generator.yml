@@ -6,8 +6,20 @@ on:
         paths:
             - "load-generator-image/**"
             - ".github/workflows/build-load-generator.yml"
-    workflow_dispatch: {}
-    workflow_call: {}
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: "Target environment (dev, stage, prod)"
+                required: true
+                default: "dev"
+                type: choice
+                options: ["dev", "stage", "prod"]
+    workflow_call:
+        inputs:
+            environment:
+                description: "Target environment (dev, stage, prod)"
+                required: true
+                type: string
 
 env:
     # Full image reference, e.g. "your-user/geth-workload:latest" or "ghcr.io/owner/geth-workload:latest"
@@ -16,6 +28,8 @@ env:
 jobs:
     build-and-push:
         runs-on: ubuntu-latest
+        # Use presto-<env> where env is an input on manual runs or workflow_call, otherwise dev
+        environment: presto-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.event_name == 'workflow_call' && inputs.environment || 'dev' }}
 
         permissions:
             contents: read
