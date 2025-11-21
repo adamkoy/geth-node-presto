@@ -267,8 +267,8 @@ If you want to stand up the entire stack (infra + all charts) from your laptop w
 
 ```bash
 cd /path/to/geth-node-presto
-chmod +x scripts/deploy-local.sh  # first time only
-./scripts/deploy-local.sh
+chmod +x scripts/deploy.sh  # first time only
+./scripts/deploy.sh
 ```
 
 This will:
