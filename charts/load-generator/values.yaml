@@ -1,0 +1,35 @@
+replicaCount: 1
+
+image:
+  repository: adamkkk89/geth-workload
+  tag: latest
+  pullPolicy: IfNotPresent
+
+geth:
+  url: "http://geth-node-geth-node.default.svc.cluster.local:8545"
+
+workload:
+  targetTps: 20
+  concurrency: 5
+  durationSeconds: 120
+  metricsPort: 8000
+
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8000
+
+
