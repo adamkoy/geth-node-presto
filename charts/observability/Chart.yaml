@@ -1,0 +1,8 @@
+apiVersion: v2
+name: observability
+description: Prometheus + Grafana stack for monitoring the Geth devnet and workload.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+

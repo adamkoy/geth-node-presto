@@ -1,0 +1,21 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "observability.fullname" . }}-prometheus
+  namespace: {{ include "observability.namespace" . }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    app: prometheus
+spec:
+  type: {{ .Values.prometheus.service.type }}
+  selector:
+    app: prometheus
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: web
+      port: {{ .Values.prometheus.service.port }}
+      targetPort: {{ .Values.prometheus.service.port }}
+{{- end }}
+
+

@@ -1,0 +1,66 @@
+namespace:
+  create: true
+  name: monitoring
+
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: latest
+    pullPolicy: IfNotPresent
+  scrapeInterval: 15s
+  evaluationInterval: 15s
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  service:
+    type: ClusterIP
+    port: 9090
+  persistence:
+    enabled: false
+    storageClass: ""
+    size: 8Gi
+
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  adminUser: admin
+  adminPassword: admin
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  service:
+    type: ClusterIP
+    port: 3000
+
+kubeDiscovery:
+  enabled: true
+
+gethMetrics:
+  enabled: true
+  serviceName: geth-geth-node
+  namespace: default
+  port: 6060
+  metricsPath: /debug/metrics/prometheus
+
+loadGeneratorMetrics:
+  enabled: true
+  serviceName: load-generator
+  namespace: default
+  port: 8000
+  metricsPath: /metrics
+
+

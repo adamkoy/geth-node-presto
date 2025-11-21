@@ -1,0 +1,25 @@
+1. Prometheus
+
+   To port-forward Prometheus:
+
+   kubectl port-forward -n {{ include "observability.namespace" . }} svc/{{ include "observability.fullname" . }}-prometheus 9090:{{ .Values.prometheus.service.port }}
+
+   Then open: http://localhost:9090
+
+   Example query:
+
+   geth_workload_head_block_number
+
+2. Grafana
+
+   To port-forward Grafana:
+
+   kubectl port-forward -n {{ include "observability.namespace" . }} svc/{{ include "observability.fullname" . }}-grafana 3000:{{ .Values.grafana.service.port }}
+
+   Then open: http://localhost:3000
+
+   Login with:
+     user: {{ .Values.grafana.adminUser }}
+     pass: {{ .Values.grafana.adminPassword }}
+
+
