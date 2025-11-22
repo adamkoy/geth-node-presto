@@ -17,11 +17,14 @@
   - [Connect kubectl to the cluster](#connect-kubectl-to-the-cluster)
   - [Deploy Helm charts](#deploy-helm-charts)
   - [Build and publish the load generator image](#build-and-publish-the-load-generator-image)
-  - [Deploy full stack locally](#deploy-full-stack-locally)
+  - [Deploy full stack locally (EKS)](#deploy-full-stack-locally-eks)
+  - [Deploy full stack on Kind](#deploy-full-stack-on-kind)
   - [Run the load generator locally](#run-the-load-generator-locally)
 - [How to](#how-to)
   - [Deploy the full stack using GitHub Actions](#deploy-the-full-stack-using-github-actions)
   - [Add a new Helm chart to the pipeline](#add-a-new-helm-chart-to-the-pipeline)
+  - [Verify 6-second blocks and persistence](#verify-6-second-blocks-and-persistence)
+  - [Open the Grafana dashboard](#open-the-grafana-dashboard)
 - [Other resources](#other-resources)
 - [License](#license)
 
@@ -261,9 +264,9 @@ image:
   tag: latest
 ```
 
-### Deploy full stack locally
+### Deploy full stack locally (EKS)
 
-If you want to stand up the entire stack (infra + all charts) from your laptop without going through GitHub Actions, use the helper script:
+If you want to stand up the entire stack (infra + all charts) against AWS EKS from your laptop without going through GitHub Actions, use the helper script:
 
 ```bash
 cd /path/to/geth-node-presto
@@ -277,6 +280,42 @@ This will:
 - Use the `eks_connect` Terraform output to configure `kubectl`.
 - Deploy the `geth-node`, `load-generator`, and `observability` Helm charts.
 - Print the current pods with `kubectl get pods -A` so you can quickly confirm everything is running.
+
+### Deploy full stack on Kind
+
+You can also run everything on a local Kind cluster without any AWS resources.
+
+1. Make sure [Kind](https://kind.sigs.k8s.io/) is installed and on your `PATH`:
+
+   ```bash
+   kind version
+   ```
+
+2. Build the load-generator image locally:
+
+   ```bash
+   cd /path/to/geth-node-presto
+
+   docker build -f load-generator-image/Dockerfile.workload \
+     -t adamkkk89/geth-workload:latest \
+     load-generator-image
+   ```
+
+3. Run the Kind deploy script:
+
+   ```bash
+   chmod +x scripts/deploy-kind.sh  # first time only
+   ./scripts/deploy-kind.sh
+   ```
+
+   This will:
+
+   - Create a Kind cluster named `geth-dev` if it does not exist.
+   - Install the `geth-node`, `load-generator`, and `observability` Helm charts.
+   - Load the locally built `adamkkk89/geth-workload:latest` image into Kind so the load-generator pod can start.
+   - Print handy commands for:
+     - Port-forwarding Geth JSON-RPC to verify 6-second blocks and persistence.
+     - Port-forwarding Grafana and opening the prebuilt dashboard.
 
 ### Run the load generator locally
 
@@ -348,6 +387,71 @@ Typical flow for a new environment:
 
 3. Optionally extend `.github/workflows/linter.yml` to include new `values.yaml`/`Chart.yaml` if needed.
 4. Run the **Helm Deploy** workflow selecting your chart or `all`.
+
+### Verify 6-second blocks and persistence
+
+You can quickly confirm that the devnet produces blocks every ~6 seconds and that state survives a pod restart.
+
+- **Check block production interval**
+
+  1. Port-forward JSON-RPC:
+
+     ```bash
+     kubectl port-forward -n default svc/geth-node-geth-node 8545:8545
+     ```
+
+  2. In another terminal, poll the head block a couple of times:
+
+     ```bash
+     curl -s -X POST http://localhost:8545 \
+       -H 'Content-Type: application/json' \
+       --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' | jq '.result'
+     # wait ~6 seconds
+     curl -s -X POST http://localhost:8545 \
+       -H 'Content-Type: application/json' \
+       --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' | jq '.result'
+     ```
+
+  You should see the block number increase by roughly 1 every ~6 seconds (because Geth is started with `--dev.period=6`).
+
+- **Check persistence of the prefunded account**
+
+  1. Query the balance of the prefunded account (should be 100 ETH):
+
+     ```bash
+     curl -s -X POST http://localhost:8545 \
+       -H 'Content-Type: application/json' \
+       --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0x62358b29b9e3e70ff51D88766e41a339D3e8FFff","latest"],"id":1}' | jq '.result'
+     ```
+
+  2. Restart the Geth pod:
+
+     ```bash
+     kubectl delete pod -n default -l app.kubernetes.io/name=geth-node
+     kubectl get pods -n default
+     ```
+
+     Wait until the new `geth-node` pod is `Running`.
+
+  3. Run the same `eth_getBalance` query again. The balance should be unchanged, confirming that the chain state is persisted on the EBS-backed PVC.
+
+### Open the Grafana dashboard
+
+The observability chart deploys Grafana and Prometheus into the `monitoring` namespace by default.
+
+1. Port-forward the Grafana service:
+
+   ```bash
+   kubectl port-forward -n monitoring svc/observability-grafana 3000:3000
+   ```
+
+2. Open `http://localhost:3000` in your browser.
+3. Log in with the credentials from `charts/observability/values.yaml` (defaults: `admin` / `admin`).
+4. Open the **“Geth DevNet Performance Dashboard”** to see:
+   - TPS, RPC RPS, MGas/s.
+   - Average and p95 latency.
+   - Failure and RPC error rates.
+   - Head block and block production rate.
 
 
 ## Other resources
