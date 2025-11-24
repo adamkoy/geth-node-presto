@@ -55,5 +55,6 @@ jobs:
                   context: ./load-generator-image
                   file: ./load-generator-image/Dockerfile.workload
                   push: true
-                  platforms: linux/amd64
+                  # Build a multi-arch image so it can run on amd64 (EKS) and arm64 (Kind on Apple Silicon)
+                  platforms: linux/amd64,linux/arm64
                   tags: ${{ env.WORKLOAD_IMAGE }}
