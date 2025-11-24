@@ -74,7 +74,7 @@ Next steps (Kind):
 
 3) Port-forward Grafana and open the dashboard:
 
-   kubectl port-forward -n monitoring svc/observability-grafana 3000:3000
+   kubectl port-forward -n monitoring svc/observability-observability-grafana 3000:3000
    # then browse to: http://localhost:3000 (default creds: admin / admin)
 
 EOF
