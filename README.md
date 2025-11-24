@@ -10,6 +10,8 @@
   - [Directory overview](#directory-overview)
   - [State and backend](#state-and-backend)
 - [Usage](#usage)
+  - [Deploy full stack on Kind](#deploy-full-stack-on-kind)
+  - [Deploy full stack on EKS](#deploy-full-stack-on-eks)
   - [Prerequisites](#prerequisites)
   - [Configuration](#configuration)
   - [Create backend resources](#create-backend-resources)
@@ -17,7 +19,6 @@
   - [Connect kubectl to the cluster](#connect-kubectl-to-the-cluster)
   - [Deploy Helm charts](#deploy-helm-charts)
   - [Build and publish the load generator image](#build-and-publish-the-load-generator-image)
-  - [Deploy full stack locally](#deploy-full-stack-locally)
   - [Run the load generator locally](#run-the-load-generator-locally)
 - [How to](#how-to)
   - [Deploy the full stack using GitHub Actions](#deploy-the-full-stack-using-github-actions)
@@ -101,6 +102,52 @@ DynamoDB table `geth-node-infra-tf-locks` is used to coordinate concurrent Terra
 The following steps describe how to bring up the infra, deploy charts, and run load.
 
 > To keep this short: each section focuses on **what**, **why**, and **how** at a high level.
+
+### Deploy full stack on Kind
+
+You can run the entire stack on a local Kind cluster without any AWS resources.
+
+1. Make sure [Kind](https://kind.sigs.k8s.io/) is installed and on your `PATH`:
+
+   ```bash
+   kind version
+   ```
+
+2. Run the Kind deploy script (it will pull the public load-generator image and load it into Kind):
+
+   ```bash
+   cd /path/to/geth-node-presto
+   chmod +x scripts/deploy-kind.sh  # first time only
+   ./scripts/deploy-kind.sh
+   ```
+
+   This will:
+
+   - Create a Kind cluster named `geth-dev` if it does not exist.
+   - Install the `geth-node`, `load-generator`, and `observability` Helm charts.
+   - Pull `adamkkk89/geth-workload:latest` from Docker Hub and load it into the Kind cluster.
+   - Print handy commands for:
+     - Port-forwarding Geth JSON-RPC to verify 6-second blocks and persistence.
+     - Port-forwarding Grafana and opening the prebuilt dashboard.
+
+### Deploy full stack on EKS
+
+If you want to stand up the entire stack (infra + all charts) against AWS EKS from your laptop without going through GitHub Actions, use the helper script:
+
+```bash
+cd /path/to/geth-node-presto
+chmod +x scripts/deploy.sh  # first time only
+./scripts/deploy.sh
+```
+
+This will:
+
+- Run `terraform init` and `terraform apply` in `terraform/`.
+- Use the `eks_connect` Terraform output to configure `kubectl`.
+- Deploy the `geth-node`, `load-generator`, and `observability` Helm charts.
+- Print the current pods with `kubectl get pods -A` so you can quickly confirm everything is running.
+
+Alternatively, you can use the GitHub Actions pipelines (`infra-deploy.yml` and `helm-deploy.yml`) as described in the **How to → Deploy the full stack using GitHub Actions** section.
 
 ### Prerequisites
 
@@ -260,23 +307,6 @@ image:
   repository: adamkkk89/geth-workload
   tag: latest
 ```
-
-### Deploy full stack locally
-
-If you want to stand up the entire stack (infra + all charts) from your laptop without going through GitHub Actions, use the helper script:
-
-```bash
-cd /path/to/geth-node-presto
-chmod +x scripts/deploy.sh  # first time only
-./scripts/deploy.sh
-```
-
-This will:
-
-- Run `terraform init` and `terraform apply` in `terraform/`.
-- Use the `eks_connect` Terraform output to configure `kubectl`.
-- Deploy the `geth-node`, `load-generator`, and `observability` Helm charts.
-- Print the current pods with `kubectl get pods -A` so you can quickly confirm everything is running.
 
 ### Run the load generator locally
 
